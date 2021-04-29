@@ -1,72 +1,69 @@
 import { Dirent } from 'fs'
-import { join } from 'path'
 import { Injector } from '@furystack/inject'
 import { createComponent, Shade } from '@furystack/shades'
-import { CurrentWorkDir } from '../services/current-workdir'
+import { ClickAwayService } from '@furystack/shades-common-components'
+import { FileListPanelService } from '../services/file-list-panel'
 import { FileEntry } from './file-entry'
 import { Breadcrumbs } from './breadcumbs'
+import { QuickSearch } from './quick-serach'
 
 export const FileListPanel = Shade<
   { injector: Injector; style?: Partial<CSSStyleDeclaration> },
-  { entries: Dirent[]; isLoading: boolean; path: string; selectedEntries: Dirent[]; focusedEntry?: Dirent }
+  {
+    entries: Dirent[]
+  }
 >({
   shadowDomName: 'file-list-panel',
   getInitialState: ({ props }) => {
-    const wd = props.injector.getInstance(CurrentWorkDir)
+    const service = props.injector.getInstance(FileListPanelService)
     return {
-      entries: wd.entries.getValue(),
-      isLoading: wd.isLoading.getValue(),
-      path: wd.path.getValue(),
-      selectedEntries: [],
+      entries: service.currentWorkDir.entries.getValue(),
     }
   },
-  constructed: ({ props, updateState }) => {
-    const wd = props.injector.getInstance(CurrentWorkDir)
+  constructed: ({ props, updateState, element }) => {
+    const service = props.injector.getInstance(FileListPanelService)
+
+    window.addEventListener('keydown', service.keyPressHandler.bind(service))
+
     const observers = [
-      wd.entries.subscribe((entries) => updateState({ entries })),
-      wd.isLoading.subscribe((isLoading) => updateState({ isLoading })),
-      wd.path.subscribe((path) => updateState({ path })),
+      service.currentWorkDir.entries.subscribe((entries) => updateState({ entries })),
+      new ClickAwayService(element, () => {
+        service.hasFocus.setValue(false)
+      }),
     ]
-    return () => observers.forEach((o) => o.dispose())
+    return () => {
+      observers.forEach((o) => o.dispose())
+      window.removeEventListener('keydown', service.keyPressHandler)
+    }
   },
-  render: ({ getState, injector, props, updateState }) => {
-    const { entries, isLoading, path, selectedEntries, focusedEntry } = getState()
+  render: ({ getState, injector }) => {
+    const { entries } = getState()
     return (
-      <div>
-        {/* Breadcrumb */}
-        <Breadcrumbs path={path} />
+      <div
+        onclick={() => injector.getInstance(FileListPanelService).hasFocus.setValue(true)}
+        style={{
+          border: '4px double white',
+          background: 'darkblue',
+          height: 'calc(100% - 8px)',
+          overflow: 'hidden',
+        }}>
         <div
-          style={{ padding: '0.4em', userSelect: 'none' }}
-          onkeypress={(ev) => {
-            /** */
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '0.4em',
+            marginBottom: '0.3em',
+            borderBottom: '1px solid white',
           }}>
-          {getState().entries.map((entry) => (
-            <FileEntry
-              isSelected={selectedEntries.includes(entry)}
-              isFocused={focusedEntry === entry}
-              onClick={(ev) => {
-                updateState({
-                  focusedEntry: entry,
-                  selectedEntries: ev.shiftKey
-                    ? [...selectedEntries, entry]
-                    : ev.ctrlKey
-                    ? selectedEntries.includes(entry)
-                      ? selectedEntries.filter((e) => e !== entry)
-                      : [...selectedEntries, entry]
-                    : [entry],
-                })
-              }}
-              parentFolder={path}
-              dirent={entry}
-              onActivate={() => {
-                if (entry.isDirectory()) {
-                  injector.getInstance(CurrentWorkDir).change(join(path, entry.name))
-                } else {
-                  console.log('Open', entry)
-                }
-              }}
-            />
-          ))}
+          <Breadcrumbs />
+          <QuickSearch />
+        </div>
+        <div style={{ padding: '0.4em', userSelect: 'none', height: 'calc(100% - 3.6em)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: '100%', overflow: 'auto' }}>
+            {entries.map((entry) => (
+              <FileEntry entry={entry} />
+            ))}
+          </div>
         </div>
       </div>
     )
