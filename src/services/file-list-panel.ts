@@ -2,6 +2,7 @@ import { Dirent, promises } from 'fs'
 import { join } from 'path'
 import { Injectable } from '@furystack/inject'
 import { Disposable, ObservableValue, ValueObserver } from '@furystack/utils'
+import { shell } from 'electron'
 import { CurrentWorkDir } from './current-workdir'
 
 @Injectable({ lifetime: 'scoped' })
@@ -20,6 +21,8 @@ export class FileListPanelService implements Disposable {
     } else if (entry.isSymbolicLink()) {
       const symLinkTarget = await promises.readlink(join(path, entry.name))
       this.currentWorkDir.change(symLinkTarget)
+    } else if (entry.isFile()) {
+      shell.openPath(join(path, entry.name))
     } else {
       console.log('Unhandled file entry', entry)
     }
