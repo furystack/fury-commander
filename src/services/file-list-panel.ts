@@ -52,6 +52,20 @@ export class FileListPanelService implements Disposable {
       case '*':
         this.selectedEntries.setValue(entries.filter((e) => !selectedEntries.includes(e)))
         break
+      case '+':
+        this.selectedEntries.setValue(entries)
+        break
+      case '-':
+        this.selectedEntries.setValue([])
+        break
+      case 'Insert':
+        this.selectedEntries.getValue().includes(this.focusedEntry.getValue())
+          ? this.selectedEntries.setValue([
+              ...this.selectedEntries.getValue().filter((e) => e !== this.focusedEntry.getValue()),
+            ])
+          : this.selectedEntries.setValue([...this.selectedEntries.getValue(), this.focusedEntry.getValue()])
+        this.focusedEntry.setValue(entries[entries.findIndex((e) => e === this.focusedEntry.getValue()) + 1])
+        break
       case 'ArrowUp':
         this.focusedEntry.setValue(entries[Math.max(0, entries.findIndex((e) => e === focusedEntry) - 1)])
         break

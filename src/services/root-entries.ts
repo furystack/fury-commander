@@ -1,8 +1,8 @@
+import { exec } from 'child_process'
 import { Injectable } from '@furystack/inject'
-import { exec } from 'node:child_process'
 
 @Injectable()
-export class DriveRoots {
+export class RootEntries {
   public async get(): Promise<string[]> {
     if (process.platform === 'win32') {
       return await new Promise<string[]>((resolve) =>
